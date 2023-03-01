@@ -2,7 +2,7 @@ site_name: pyfolio
 repo_url: https://github.com/quantopian/pyfolio
 site_author: Quantopian Inc.
 
-pages:
+nav:
 - Overview: 'index.md'
 - Releases: 'whatsnew.md'
 - Tutorial:
