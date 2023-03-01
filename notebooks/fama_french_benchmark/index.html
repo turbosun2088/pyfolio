@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Quantopian Inc.">
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Fama French Benchmark Example - pyfolio</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link href="../../extra.css" rel="stylesheet">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">pyfolio</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Overview</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../whatsnew/" class="nav-link">Releases</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../single_stock_example/" class="dropdown-item">Single stock</a>
+</li>
+                                    
+<li>
+    <a href="../zipline_algo_example/" class="dropdown-item">Zipline algorithm</a>
+</li>
+                                    
+<li>
+    <a href="../sector_mappings_example/" class="dropdown-item">Sector analysis</a>
+</li>
+                                    
+<li>
+    <a href="../round_trip_tear_sheet_example/" class="dropdown-item">Round trip analysis</a>
+</li>
+                                    
+<li>
+    <a href="../slippage_example/" class="dropdown-item">Slippage analysis</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/quantopian/pyfolio/edit/master/docs/notebooks/fama_french_benchmark.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#fama-french-benchmark-example" class="nav-link">Fama French Benchmark Example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="fama-french-benchmark-example">Fama French Benchmark Example</h1>
+<p>In this notebook, we use pyfolio to analyze the returns of a single stock using the canonical Fama-French factors as the benchmark.</p>
+<p>We plot the rolling betas to the Fama-French factors, and run the Bayesian tear sheet for an out-of-sample period of two months.</p>
+<pre><code class="language-python">import sys
+sys.path.append('/Users/george/Desktop/pyfolio/')
+sys.path
+</code></pre>
+<pre><code>['',
+ '/Users/george/anaconda/lib/python36.zip',
+ '/Users/george/anaconda/lib/python3.6',
+ '/Users/george/anaconda/lib/python3.6/lib-dynload',
+ '/Users/george/anaconda/lib/python3.6/site-packages',
+ '/Users/george/anaconda/lib/python3.6/site-packages/Sphinx-1.5.6-py3.6.egg',
+ '/Users/george/anaconda/lib/python3.6/site-packages/aeosa',
+ '/Users/george/anaconda/lib/python3.6/site-packages/setuptools-27.2.0-py3.6.egg',
+ '/Users/george/anaconda/lib/python3.6/site-packages/IPython/extensions',
+ '/Users/george/.ipython',
+ '/Users/george/Desktop/pyfolio/']
+</code></pre>
+<pre><code class="language-python">import pyfolio as pf
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+# silence warnings
+import warnings
+warnings.filterwarnings('ignore')
+</code></pre>
+<pre><code class="language-python"># Get the single stock returns
+stock_rets = pf.utils.get_symbol_rets('FB')
+</code></pre>
+<pre><code class="language-python"># With just the stock returns, we can plot the rolling betas to the Fama-French factors.
+# No need to actually compute the rolling betas; pyfolio does that for us!
+fig, ax = plt.subplots(figsize=[14, 6])
+pf.plotting.plot_rolling_fama_french(stock_rets, ax=ax)
+</code></pre>
+<pre><code>&lt;matplotlib.axes._subplots.AxesSubplot at 0x116d99eb8&gt;
+</code></pre>
+<p><img alt="png" src="../fama_french_benchmark_files/fama_french_benchmark_4_1.png" /></p>
+<pre><code class="language-python"># However, for the bayesian tear sheet, we will actually need the rolling betas,
+# so use pyfolio to get them
+rolling_beta = pf.timeseries.rolling_fama_french(stock_rets)
+
+# pf.timeseries.rolling_beta defaults to a 6-month trailing window.
+# Thus, the first 6 months' data will be NaNs, which we must drop
+rolling_beta.dropna(inplace=True)
+</code></pre>
+<pre><code class="language-python">rolling_beta.head()
+</code></pre>
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>SMB</th>
+      <th>HML</th>
+      <th>Mom</th>
+    </tr>
+    <tr>
+      <th>Date</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2012-11-20 00:00:00+00:00</th>
+      <td>1.064788</td>
+      <td>1.283250</td>
+      <td>0.242012</td>
+    </tr>
+    <tr>
+      <th>2012-11-21 00:00:00+00:00</th>
+      <td>1.528191</td>
+      <td>0.658291</td>
+      <td>0.078740</td>
+    </tr>
+    <tr>
+      <th>2012-11-23 00:00:00+00:00</th>
+      <td>1.232070</td>
+      <td>0.767785</td>
+      <td>0.166490</td>
+    </tr>
+    <tr>
+      <th>2012-11-26 00:00:00+00:00</th>
+      <td>1.366909</td>
+      <td>0.742015</td>
+      <td>0.214160</td>
+    </tr>
+    <tr>
+      <th>2012-11-27 00:00:00+00:00</th>
+      <td>1.372172</td>
+      <td>0.700392</td>
+      <td>0.159386</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<pre><code class="language-python"># Suppose the last 2 months were our out-of-sample period
+out_of_sample = stock_rets.index[-60]
+
+# Use pyfolio to run the bayesian tear sheet.
+# The bayesian tear sheet's back end makes heavy use of pymc3, so there will be
+# a lot of graphical output before the actual tear sheet
+pf.tears.create_bayesian_tear_sheet(stock_rets, live_start_date=out_of_sample, benchmark_rets=rolling_beta)
+</code></pre>
+<pre><code>Running T model
+Optimization terminated successfully.
+         Current function value: -3113.664255
+         Iterations: 3
+         Function evaluations: 117
+
+
+100%|██████████| 2500/2500 [02:53&lt;00:00, 14.39it/s]
+100%|██████████| 2000/2000 [00:01&lt;00:00, 1328.55it/s]
+
+
+
+Finished T model (required 238.11 seconds).
+
+Running BEST model
+
+
+ 64%|██████▍   | 1598/2500 [02:30&lt;01:51,  8.09it/s]
+</code></pre>
+<pre><code class="language-python">
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

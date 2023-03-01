@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Quantopian Inc.">
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Slippage analysis - pyfolio</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link href="../../extra.css" rel="stylesheet">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">pyfolio</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Overview</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../whatsnew/" class="nav-link">Releases</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../single_stock_example/" class="dropdown-item">Single stock</a>
+</li>
+                                    
+<li>
+    <a href="../zipline_algo_example/" class="dropdown-item">Zipline algorithm</a>
+</li>
+                                    
+<li>
+    <a href="../sector_mappings_example/" class="dropdown-item">Sector analysis</a>
+</li>
+                                    
+<li>
+    <a href="../round_trip_tear_sheet_example/" class="dropdown-item">Round trip analysis</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Slippage analysis</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../round_trip_tear_sheet_example/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/quantopian/pyfolio/edit/master/docs/notebooks/slippage_example.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#slippage-analysis" class="nav-link">Slippage Analysis</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="slippage-analysis">Slippage Analysis</h1>
+<p>When evaluating a strategy using backtest results, we often want to know how sensitive it's performance is to implementation shortfall or slippage. pyfolio's transactions tear sheet can create "slippage sweep" plots that display strategy performance under various slippage assumptions. </p>
+<p>Additional per-dollar slippage can be applied to returns before running a tear sheet by providing <code>create_full_tear_sheet</code> with the a level of slippage in basis points (1% == 100 basis points) as the <code>slippage</code> keyword argument. The slippage plots in the transactions tear sheet will display returns with slippage added to the <strong>unadjusted</strong> returns. </p>
+<p>For example, if you run a backtest with no transaction costs and call <code>create_full_tear_sheet(returns, positions, transactions, slippage=5)</code>, 5 bps of slippage will be applied to <code>returns</code> before all plots and figures, with the exception of the slippage sweep plots, are generated.</p>
+<p>It is important to emphasize that the slippage plots will display performance under <strong>additional</strong> slippage. If the passed performance data already has slippage applied, the 5 bps slippage equity curve will represent performance under 5 bps of slippage in addition to the already simulated slippage penalty. If slippage is already applied to the performance results, pass <code>slippage=0</code> to the <code>create_full_tear_sheet</code> to trigger the creation of the additional slippage sweep plots without applying any additional slippage to the returns time series used throughout the rest of the tear sheet.</p>
+<pre><code class="language-python">%matplotlib inline
+import pyfolio as pf
+import gzip
+import pandas as pd
+
+# silence warnings
+import warnings
+warnings.filterwarnings('ignore')
+</code></pre>
+<pre><code class="language-python">transactions = pd.read_csv(gzip.open('../tests/test_data/test_txn.csv.gz'),
+                    index_col=0, parse_dates=True)
+positions = pd.read_csv(gzip.open('../tests/test_data/test_pos.csv.gz'),
+                    index_col=0, parse_dates=True)
+returns = pd.read_csv(gzip.open('../tests/test_data/test_returns.csv.gz'),
+                    index_col=0, parse_dates=True, header=None)[1]
+returns.index = returns.index.tz_localize(&quot;UTC&quot;)
+positions.index = positions.index.tz_localize(&quot;UTC&quot;)
+transactions.index = transactions.index.tz_localize(&quot;UTC&quot;)
+</code></pre>
+<pre><code class="language-python">pf.create_full_tear_sheet(returns, positions, transactions, slippage=0)
+</code></pre>
+<pre><code>Entire data start date: 2004-01-09
+Entire data end date: 2009-12-31
+Backtest months: 71
+</code></pre>
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Backtest</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Annual return</th>
+      <td>8.8%</td>
+    </tr>
+    <tr>
+      <th>Cumulative returns</th>
+      <td>65.4%</td>
+    </tr>
+    <tr>
+      <th>Annual volatility</th>
+      <td>26.3%</td>
+    </tr>
+    <tr>
+      <th>Sharpe ratio</th>
+      <td>0.45</td>
+    </tr>
+    <tr>
+      <th>Calmar ratio</th>
+      <td>0.15</td>
+    </tr>
+    <tr>
+      <th>Stability</th>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <th>Max drawdown</th>
+      <td>-60.4%</td>
+    </tr>
+    <tr>
+      <th>Omega ratio</th>
+      <td>1.09</td>
+    </tr>
+    <tr>
+      <th>Sortino ratio</th>
+      <td>0.66</td>
+    </tr>
+    <tr>
+      <th>Skew</th>
+      <td>0.14</td>
+    </tr>
+    <tr>
+      <th>Kurtosis</th>
+      <td>5.88</td>
+    </tr>
+    <tr>
+      <th>Tail ratio</th>
+      <td>0.99</td>
+    </tr>
+    <tr>
+      <th>Daily value at risk</th>
+      <td>-3.3%</td>
+    </tr>
+    <tr>
+      <th>Gross leverage</th>
+      <td>1.03</td>
+    </tr>
+    <tr>
+      <th>Daily turnover</th>
+      <td>11.1%</td>
+    </tr>
+    <tr>
+      <th>Alpha</th>
+      <td>0.08</td>
+    </tr>
+    <tr>
+      <th>Beta</th>
+      <td>0.83</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Worst drawdown periods</th>
+      <th>Net drawdown in %</th>
+      <th>Peak date</th>
+      <th>Valley date</th>
+      <th>Recovery date</th>
+      <th>Duration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>60.39</td>
+      <td>2007-11-06</td>
+      <td>2009-03-09</td>
+      <td>NaT</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>24.10</td>
+      <td>2005-07-28</td>
+      <td>2006-09-07</td>
+      <td>2007-05-22</td>
+      <td>474</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>11.89</td>
+      <td>2004-06-25</td>
+      <td>2004-08-12</td>
+      <td>2004-11-05</td>
+      <td>96</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>10.87</td>
+      <td>2004-11-15</td>
+      <td>2005-04-18</td>
+      <td>2005-07-14</td>
+      <td>174</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>9.51</td>
+      <td>2007-07-16</td>
+      <td>2007-08-06</td>
+      <td>2007-09-13</td>
+      <td>44</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><img alt="png" src="../slippage_example_files/slippage_example_4_3.png" /></p>
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Stress Events</th>
+      <th>mean</th>
+      <th>min</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Lehmann</th>
+      <td>-0.27%</td>
+      <td>-4.70%</td>
+      <td>4.11%</td>
+    </tr>
+    <tr>
+      <th>Aug07</th>
+      <td>0.32%</td>
+      <td>-2.96%</td>
+      <td>2.92%</td>
+    </tr>
+    <tr>
+      <th>Mar08</th>
+      <td>-0.43%</td>
+      <td>-3.26%</td>
+      <td>3.36%</td>
+    </tr>
+    <tr>
+      <th>Sept08</th>
+      <td>-0.68%</td>
+      <td>-4.38%</td>
+      <td>4.08%</td>
+    </tr>
+    <tr>
+      <th>2009Q1</th>
+      <td>-0.36%</td>
+      <td>-5.02%</td>
+      <td>3.39%</td>
+    </tr>
+    <tr>
+      <th>2009Q2</th>
+      <td>0.74%</td>
+      <td>-4.03%</td>
+      <td>6.13%</td>
+    </tr>
+    <tr>
+      <th>Low Volatility Bull Market</th>
+      <td>0.01%</td>
+      <td>-6.07%</td>
+      <td>6.43%</td>
+    </tr>
+    <tr>
+      <th>GFC Crash</th>
+      <td>-0.09%</td>
+      <td>-11.76%</td>
+      <td>10.13%</td>
+    </tr>
+    <tr>
+      <th>Recovery</th>
+      <td>0.35%</td>
+      <td>-4.03%</td>
+      <td>6.01%</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><img alt="png" src="../slippage_example_files/slippage_example_4_5.png" /></p>
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Top 10 long positions of all time</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>COST</th>
+      <td>90.01%</td>
+    </tr>
+    <tr>
+      <th>DELL</th>
+      <td>85.73%</td>
+    </tr>
+    <tr>
+      <th>CERN</th>
+      <td>83.53%</td>
+    </tr>
+    <tr>
+      <th>MMM</th>
+      <td>82.09%</td>
+    </tr>
+    <tr>
+      <th>INTC</th>
+      <td>78.59%</td>
+    </tr>
+    <tr>
+      <th>AMD</th>
+      <td>75.76%</td>
+    </tr>
+    <tr>
+      <th>GPS</th>
+      <td>62.24%</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Top 10 short positions of all time</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>AMD</th>
+      <td>-30.12%</td>
+    </tr>
+    <tr>
+      <th>DELL</th>
+      <td>-26.58%</td>
+    </tr>
+    <tr>
+      <th>CERN</th>
+      <td>-25.51%</td>
+    </tr>
+    <tr>
+      <th>MMM</th>
+      <td>-22.62%</td>
+    </tr>
+    <tr>
+      <th>GPS</th>
+      <td>-20.09%</td>
+    </tr>
+    <tr>
+      <th>INTC</th>
+      <td>-18.47%</td>
+    </tr>
+    <tr>
+      <th>COST</th>
+      <td>-16.44%</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Top 10 positions of all time</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>COST</th>
+      <td>90.01%</td>
+    </tr>
+    <tr>
+      <th>DELL</th>
+      <td>85.73%</td>
+    </tr>
+    <tr>
+      <th>CERN</th>
+      <td>83.53%</td>
+    </tr>
+    <tr>
+      <th>MMM</th>
+      <td>82.09%</td>
+    </tr>
+    <tr>
+      <th>INTC</th>
+      <td>78.59%</td>
+    </tr>
+    <tr>
+      <th>AMD</th>
+      <td>75.76%</td>
+    </tr>
+    <tr>
+      <th>GPS</th>
+      <td>62.24%</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div>
+<style>
+    .dataframe thead tr:only-child th {
+        text-align: right;
+    }
+
+    .dataframe thead th {
+        text-align: left;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>All positions ever held</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>COST</th>
+      <td>90.01%</td>
+    </tr>
+    <tr>
+      <th>DELL</th>
+      <td>85.73%</td>
+    </tr>
+    <tr>
+      <th>CERN</th>
+      <td>83.53%</td>
+    </tr>
+    <tr>
+      <th>MMM</th>
+      <td>82.09%</td>
+    </tr>
+    <tr>
+      <th>INTC</th>
+      <td>78.59%</td>
+    </tr>
+    <tr>
+      <th>AMD</th>
+      <td>75.76%</td>
+    </tr>
+    <tr>
+      <th>GPS</th>
+      <td>62.24%</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><img alt="png" src="../slippage_example_files/slippage_example_4_10.png" /></p>
+<p><img alt="png" src="../slippage_example_files/slippage_example_4_11.png" /></p>
+<pre><code class="language-python">
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
