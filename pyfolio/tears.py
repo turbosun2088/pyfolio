@@ -72,7 +72,8 @@ def create_full_tear_sheet(returns,
                            factor_loadings=None,
                            pos_in_dollars=True,
                            header_rows=None,
-                           factor_partitions=FACTOR_PARTITIONS):
+                           factor_partitions=FACTOR_PARTITIONS,
+                           return_fig=False):
     """
     Generate a number of tear sheets that are useful
     for analyzing a strategy's performance.
@@ -177,7 +178,8 @@ def create_full_tear_sheet(returns,
     positions = utils.check_intraday(estimate_intraday, returns,
                                      positions, transactions)
 
-    create_returns_tear_sheet(
+    figs = []
+    fig_returns = create_returns_tear_sheet(
         returns,
         positions=positions,
         transactions=transactions,
@@ -187,24 +189,32 @@ def create_full_tear_sheet(returns,
         bootstrap=bootstrap,
         turnover_denom=turnover_denom,
         header_rows=header_rows,
-        set_context=set_context)
+        set_context=set_context,
+        return_fig=return_fig)
 
-    create_interesting_times_tear_sheet(returns,
+    figs.append(fig_returns)
+
+    fig_inter = create_interesting_times_tear_sheet(returns,
                                         benchmark_rets=benchmark_rets,
-                                        set_context=set_context)
-
+                                        set_context=set_context,
+                                        return_fig=return_fig)
+    figs.append(fig_inter)
     if positions is not None:
-        create_position_tear_sheet(returns, positions,
+        fig_pos = create_position_tear_sheet(returns, positions,
                                    hide_positions=hide_positions,
                                    set_context=set_context,
                                    sector_mappings=sector_mappings,
-                                   estimate_intraday=False)
+                                   estimate_intraday=False,
+                                   return_fig=return_fig)
+        figs.append(fig_pos)
 
         if transactions is not None:
-            create_txn_tear_sheet(returns, positions, transactions,
+            fig_txn = create_txn_tear_sheet(returns, positions, transactions,
                                   unadjusted_returns=unadjusted_returns,
                                   estimate_intraday=False,
-                                  set_context=set_context)
+                                  set_context=set_context,return_fig=return_fig)
+            figs.append(fig_txn)
+
             if round_trips:
                 create_round_trip_tear_sheet(
                     returns=returns,
@@ -225,6 +235,9 @@ def create_full_tear_sheet(returns,
                                           factor_loadings, transactions,
                                           pos_in_dollars=pos_in_dollars,
                                           factor_partitions=factor_partitions)
+    if return_fig:
+        return figs
+
 
 
 @plotting.customize
@@ -403,6 +416,8 @@ def create_simple_tear_sheet(returns,
 
     for ax in fig.axes:
         plt.setp(ax.get_xticklabels(), visible=True)
+
+
 
 
 @plotting.customize

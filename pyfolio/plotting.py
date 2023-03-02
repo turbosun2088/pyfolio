@@ -645,7 +645,7 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
         perf_stats = pd.DataFrame(perf_stats_all, columns=['Backtest'])
 
     for column in perf_stats.columns:
-        for stat, value in perf_stats[column].iteritems():
+        for stat, value in perf_stats[column].items():
             if stat in STAT_FUNCS_PCT:
                 perf_stats.loc[stat, column] = str(np.round(value * 100,
                                                             3)) + '%'
@@ -802,7 +802,7 @@ def plot_rolling_returns(returns,
         oos_cum_returns = cum_rets.loc[cum_rets.index >= live_start_date]
     else:
         is_cum_returns = cum_rets
-        oos_cum_returns = pd.Series([])
+        oos_cum_returns = pd.Series([], dtype='float64')
 
     is_cum_returns.plot(lw=3, color='forestgreen', alpha=0.6,
                         label='Backtest', ax=ax, **kwargs)
@@ -1550,7 +1550,7 @@ def plot_daily_turnover_hist(transactions, positions, turnover_denom='AGB',
     if ax is None:
         ax = plt.gca()
     turnover = txn.get_turnover(positions, transactions, turnover_denom)
-    sns.distplot(turnover, ax=ax, **kwargs)
+    sns.histplot(turnover, ax=ax, **kwargs)
     ax.set_title('Distribution of daily turnover rates')
     ax.set_xlabel('Turnover rate')
     return ax

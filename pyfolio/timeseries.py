@@ -721,7 +721,7 @@ def perf_stats(returns, factor_returns=None, positions=None,
         Performance metrics.
     """
 
-    stats = pd.Series()
+    stats = pd.Series([], dtype='float64')
     for stat_func in SIMPLE_STAT_FUNCS:
         stats[STAT_FUNC_NAMES[stat_func.__name__]] = stat_func(returns)
 
@@ -1227,7 +1227,10 @@ def extract_interesting_date_ranges(returns, periods=None):
     ranges = OrderedDict()
     for name, (start, end) in periods.items():
         try:
-            period = returns_dupe.loc[start:end]
+            # TODO: change 'UTC' to local timezone
+            start_tz = start.tz_localize('UTC')
+            end_tz = end.tz_localize('UTC')
+            period = returns_dupe.loc[start_tz:end_tz]
             if len(period) == 0:
                 continue
             ranges[name] = period
