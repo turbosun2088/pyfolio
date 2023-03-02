@@ -1630,7 +1630,7 @@ def plot_txn_time_hist(transactions, bin_minutes=5, tz='America/New_York',
     txn_time.index = txn_time.index.tz_convert(pytz.timezone(tz))
     txn_time.index = txn_time.index.map(lambda x: x.hour * 60 + x.minute)
     txn_time['trade_value'] = (txn_time.amount * txn_time.price).abs()
-    txn_time = txn_time.groupby(level=0).sum().reindex(index=range(570, 961))
+    txn_time = txn_time.groupby(level=0).sum(numeric_only=True).reindex(index=range(570, 961))
     txn_time.index = (txn_time.index / bin_minutes).astype(int) * bin_minutes
     txn_time = txn_time.groupby(level=0).sum()
 
